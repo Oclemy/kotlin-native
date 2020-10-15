@@ -10,26 +10,25 @@ import kotlin.IllegalArgumentException
 /**
  * Returns `true` if this character (Unicode code point) is defined in Unicode.
  */
-@SymbolName("Kotlin_Char_isDefined")
-external public fun Char.isDefined(): Boolean
+public actual fun Char.isDefined(): Boolean = getCategoryValue() != CharCategory.UNASSIGNED.value
 
 /**
  * Returns `true` if this character is a letter.
+ * @sample samples.text.Chars.isLetter
  */
-@SymbolName("Kotlin_Char_isLetter")
-external public fun Char.isLetter(): Boolean
+public actual fun Char.isLetter(): Boolean = getCategoryValue() in CharCategory.UPPERCASE_LETTER.value..CharCategory.OTHER_LETTER.value
 
 /**
  * Returns `true` if this character is a letter or digit.
+ * @sample samples.text.Chars.isLetterOrDigit
  */
-@SymbolName("Kotlin_Char_isLetterOrDigit")
-external public fun Char.isLetterOrDigit(): Boolean
+public actual fun Char.isLetterOrDigit(): Boolean = isLetter() || isDigit()
 
 /**
  * Returns `true` if this character (Unicode code point) is a digit.
+ * @sample samples.text.Chars.isDigit
  */
-@SymbolName("Kotlin_Char_isDigit")
-external public fun Char.isDigit(): Boolean
+public actual fun Char.isDigit(): Boolean = getCategoryValue() == CharCategory.DECIMAL_DIGIT_NUMBER.value
 
 /**
  * Returns `true` if this character (Unicode code point) should be regarded as an ignorable
@@ -53,15 +52,21 @@ external public actual fun Char.isWhitespace(): Boolean
 
 /**
  * Returns `true` if this character is upper case.
+ * @sample samples.text.Chars.isUpperCase
  */
-@SymbolName("Kotlin_Char_isUpperCase")
-external public fun Char.isUpperCase(): Boolean
+public actual fun Char.isUpperCase(): Boolean = getCategoryValue() == CharCategory.UPPERCASE_LETTER.value
 
 /**
  * Returns `true` if this character is lower case.
+ * @sample samples.text.Chars.isLowerCase
  */
-@SymbolName("Kotlin_Char_isLowerCase")
-external public fun Char.isLowerCase(): Boolean
+public actual fun Char.isLowerCase(): Boolean = getCategoryValue() == CharCategory.LOWERCASE_LETTER.value
+
+/**
+ * Returns `true` if this character is a titlecase character.
+ * @sample samples.text.Chars.isTitleCase
+ */
+public actual fun Char.isTitleCase(): Boolean = getCategoryValue() == CharCategory.TITLECASE_LETTER.value
 
 /**
  * Converts this character to upper case using Unicode mapping rules of the invariant locale.
@@ -152,13 +157,10 @@ internal actual fun digitOf(char: Char, radix: Int): Int = digitOfChecked(char, 
 external internal fun digitOfChecked(char: Char, radix: Int): Int
 
 /**
- * Returns a value indicating a character's general category.
+ * Return a Unicode category of this character as an Int.
  */
-public val Char.category: CharCategory get() = CharCategory.valueOf(getType())
-
-/** Retrun a Unicode category of the character as an Int. */
-@SymbolName("Kotlin_Char_getType")
-external internal fun Char.getType(): Int
+@kotlin.internal.InlineOnly
+internal actual inline fun Char.getCategoryValue(): Int = getCategoryValue(this.toInt())
 
 /**
  * Checks whether the given [radix] is valid radix for string to number and number to string conversion.
