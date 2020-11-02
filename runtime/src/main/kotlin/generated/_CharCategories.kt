@@ -208,7 +208,7 @@ private val categoryOfRange = intArrayOf(
     0x1805, 0x0005, 0x0504, 0x0005, 0x0004, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x001a, 0x1b19, 0x1a1c, 0x001a, 0x191c, 0x0019, 0x001c, 0x0010, 0x001c, 
 )
 
-private fun binarySearchRange(array: IntArray, needle: Int): Int {
+internal fun binarySearchRange(array: IntArray, needle: Int): Int {
     var bottom = 0
     var top = array.size - 1
     var middle = -1
@@ -226,7 +226,11 @@ private fun binarySearchRange(array: IntArray, needle: Int): Int {
     return middle - (if (needle < value) 1 else 0)
 }
 
-internal fun getCategoryValue(ch: Int): Int {
+/**
+ * Returns the Unicode general category of this character as an Int.
+ */
+internal fun Char.getCategoryValue(): Int {
+    val ch = this.toInt()
     val index = binarySearchRange(rangeStart, ch)
     val high = rangeEnd[index]
     if (ch <= high) {
