@@ -20,7 +20,7 @@ private val rangeStart = intArrayOf(
  */
 internal fun Char.isDigitImpl(): Boolean {
     val ch = this.toInt()
-    val index = binarySearchRange(DigitRangesWrapper.rangeStart, ch)
-    val high = DigitRangesWrapper.rangeStart[index] + 9
+    val index = binarySearchRange(rangeStart, ch)
+    val high = rangeStart[index] + 9
     return ch <= high
 }
