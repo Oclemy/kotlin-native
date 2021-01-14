@@ -9,6 +9,6 @@
 #include <stdint.h>
 
 // Computes polynomial hash with base = 31.
-int polyHash(int length, int16_t const* str);
+int polyHash(int length, uint16_t const* str);
 
 #endif  // RUNTIME_POLYHASH_H

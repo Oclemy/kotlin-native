@@ -30,7 +30,7 @@ inline __m128i squash(__m128i x, __m128i y) {
   return _mm_hadd_epi32(sum, sum);    // [x0..3 + y0..3, same, same, same]
 }
 
-inline void polyHashAVX2UnalignedUnroll64(int& n, int16_t const*& str, __m128i& res) {
+inline void polyHashAVX2UnalignedUnroll64(int& n, uint16_t const*& str, __m128i& res) {
   if (n < 16) return;
 
   // res0..res7 will accumulate 64 intermediate sums.
@@ -44,14 +44,14 @@ inline void polyHashAVX2UnalignedUnroll64(int& n, int16_t const*& str, __m128i& 
   __m256i res7 = _mm256_setzero_si256();
 
   do {
-    __m256i x0_7   = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str));
-    __m256i x8_15  = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 8));
-    __m256i x16_23 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 16));
-    __m256i x24_31 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 24));
-    __m256i x32_39 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 32));
-    __m256i x40_47 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 40));
-    __m256i x48_55 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 48));
-    __m256i x56_63 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 56));
+    __m256i x0_7   = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str));
+    __m256i x8_15  = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 8));
+    __m256i x16_23 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 16));
+    __m256i x24_31 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 24));
+    __m256i x32_39 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 32));
+    __m256i x40_47 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 40));
+    __m256i x48_55 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 48));
+    __m256i x56_63 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 56));
     res0 = _mm256_mullo_epi32(res0, *reinterpret_cast<__m256i*>(b64.values));
     res1 = _mm256_mullo_epi32(res1, *reinterpret_cast<__m256i*>(b64.values));
     res2 = _mm256_mullo_epi32(res2, *reinterpret_cast<__m256i*>(b64.values));
@@ -87,7 +87,7 @@ inline void polyHashAVX2UnalignedUnroll64(int& n, int16_t const*& str, __m128i& 
   res = _mm_add_epi32(res, _mm256_extracti128_si256(sum, 1));
 }
 
-inline void polyHashAVX2UnalignedUnroll32(int& n, int16_t const*& str, __m128i& res) {
+inline void polyHashAVX2UnalignedUnroll32(int& n, uint16_t const*& str, __m128i& res) {
   if (n < 8) return;
 
   res = _mm_mullo_epi32(res, *reinterpret_cast<__m128i*>(b32.values));
@@ -99,10 +99,10 @@ inline void polyHashAVX2UnalignedUnroll32(int& n, int16_t const*& str, __m128i& 
   __m256i res3 = _mm256_setzero_si256();
 
   do {
-    __m256i x0_7   = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str));
-    __m256i x8_15  = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 8));
-    __m256i x16_23 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 16));
-    __m256i x24_31 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 24));
+    __m256i x0_7   = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str));
+    __m256i x8_15  = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 8));
+    __m256i x16_23 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 16));
+    __m256i x24_31 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 24));
     res0 = _mm256_mullo_epi32(res0, *reinterpret_cast<__m256i*>(b32.values));
     res1 = _mm256_mullo_epi32(res1, *reinterpret_cast<__m256i*>(b32.values));
     res2 = _mm256_mullo_epi32(res2, *reinterpret_cast<__m256i*>(b32.values));
@@ -125,7 +125,7 @@ inline void polyHashAVX2UnalignedUnroll32(int& n, int16_t const*& str, __m128i& 
   res = _mm_add_epi32(res, _mm256_extracti128_si256(sum, 1));
 }
 
-inline void polyHashAVX2UnalignedUnroll16(int& n, int16_t const*& str, __m128i& res) {
+inline void polyHashAVX2UnalignedUnroll16(int& n, uint16_t const*& str, __m128i& res) {
   if (n < 4) return;
 
   res = _mm_mullo_epi32(res, *reinterpret_cast<__m128i*>(b16.values));
@@ -135,8 +135,8 @@ inline void polyHashAVX2UnalignedUnroll16(int& n, int16_t const*& str, __m128i& 
   __m256i res1 = _mm256_setzero_si256();
 
   do {
-    __m256i x0_7  = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str));
-    __m256i x8_15 = _mm256_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 8));
+    __m256i x0_7  = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str));
+    __m256i x8_15 = _mm256_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 8));
     res0 = _mm256_mullo_epi32(res0, *reinterpret_cast<__m256i*>(b16.values));
     res1 = _mm256_mullo_epi32(res1, *reinterpret_cast<__m256i*>(b16.values));
     __m256i z0_7  = _mm256_mullo_epi32(x0_7, *reinterpret_cast<__m256i*>(p64.values + 48));  // [b^15, .., b^8]
@@ -153,10 +153,10 @@ inline void polyHashAVX2UnalignedUnroll16(int& n, int16_t const*& str, __m128i& 
   res = _mm_add_epi32(res, _mm256_extracti128_si256(sum, 1));
 }
 
-inline void polyHashSSEUnalignedTail(int n, int16_t const* str, __m128i& res) {
+inline void polyHashSSEUnalignedTail(int n, uint16_t const* str, __m128i& res) {
   if (n == 0) return;
 
-  __m128i x4_7 = _mm_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str));
+  __m128i x4_7 = _mm_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str));
   __m128i z4_7 = _mm_mullo_epi32(x4_7, *reinterpret_cast<__m128i*>(p64.values + 60)); // [b^3, b^2, b, 1]
 
   res = _mm_mullo_epi32(res, *reinterpret_cast<__m128i*>(b4.values));
@@ -166,9 +166,9 @@ inline void polyHashSSEUnalignedTail(int n, int16_t const* str, __m128i& res) {
 }
 
 
-inline void polyHashAVX2UnalignedTail(int n, int16_t const* str, __m128i& res) {
+inline void polyHashAVX2UnalignedTail(int n, uint16_t const* str, __m128i& res) {
   if (n >= 2) {
-    __m256i x0_7 = _mm256_cvtepi16_epi32(_mm_loadu_si128(reinterpret_cast<__m128i const*>(str)));
+    __m256i x0_7 = _mm256_cvtepu16_epi32(_mm_loadu_si128(reinterpret_cast<__m128i const*>(str)));
     __m256i z0_7 = _mm256_mullo_epi32(x0_7, *reinterpret_cast<__m256i*>(p64.values + 56)); // [b^7, .., b, 1]
     res = _mm_mullo_epi32(res, *reinterpret_cast<__m128i*>(b8.values));
     __m256i sum = _mm256_hadd_epi32(z0_7, z0_7);
@@ -183,7 +183,7 @@ inline void polyHashAVX2UnalignedTail(int n, int16_t const* str, __m128i& res) {
   polyHashSSEUnalignedTail(n, str, res);
 }
 
-int polyHashAVX2UnalignedUnrollUpTo16(int n, int16_t const* str) {
+int polyHashAVX2UnalignedUnrollUpTo16(int n, uint16_t const* str) {
   __m128i res = _mm_setzero_si128();
 
   polyHashAVX2UnalignedUnroll16(n, str, res);
@@ -192,7 +192,7 @@ int polyHashAVX2UnalignedUnrollUpTo16(int n, int16_t const* str) {
   return _mm_cvtsi128_si32(res);
 }
 
-int polyHashAVX2UnalignedUnrollUpTo32(int n, int16_t const* str) {
+int polyHashAVX2UnalignedUnrollUpTo32(int n, uint16_t const* str) {
   __m128i res = _mm_setzero_si128();
 
   polyHashAVX2UnalignedUnroll32(n, str, res);
@@ -202,7 +202,7 @@ int polyHashAVX2UnalignedUnrollUpTo32(int n, int16_t const* str) {
   return _mm_cvtsi128_si32(res);
 }
 
-int polyHashAVX2UnalignedUnrollUpTo64(int n, int16_t const* str) {
+int polyHashAVX2UnalignedUnrollUpTo64(int n, uint16_t const* str) {
   __m128i res = _mm_setzero_si128();
 
   polyHashAVX2UnalignedUnroll64(n, str, res);
@@ -213,7 +213,7 @@ int polyHashAVX2UnalignedUnrollUpTo64(int n, int16_t const* str) {
   return _mm_cvtsi128_si32(res);
 }
 
-inline void polyHashSSEUnalignedUnroll16(int& n, int16_t const*& str, __m128i& res) {
+inline void polyHashSSEUnalignedUnroll16(int& n, uint16_t const*& str, __m128i& res) {
   if (n < 4) return;
 
   // res0, res1, res2, res3 will accumulate 16 intermediate sums.
@@ -223,10 +223,10 @@ inline void polyHashSSEUnalignedUnroll16(int& n, int16_t const*& str, __m128i& r
   __m128i res3 = _mm_setzero_si128();
 
   do {
-    __m128i x0_7   = _mm_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str));
-    __m128i x8_15  = _mm_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 4));
-    __m128i x16_23 = _mm_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 8));
-    __m128i x24_31 = _mm_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 12));
+    __m128i x0_7   = _mm_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str));
+    __m128i x8_15  = _mm_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 4));
+    __m128i x16_23 = _mm_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 8));
+    __m128i x24_31 = _mm_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 12));
     res0 = _mm_mullo_epi32(res0, *reinterpret_cast<__m128i*>(b16.values));
     res1 = _mm_mullo_epi32(res1, *reinterpret_cast<__m128i*>(b16.values));
     res2 = _mm_mullo_epi32(res2, *reinterpret_cast<__m128i*>(b16.values));
@@ -247,7 +247,7 @@ inline void polyHashSSEUnalignedUnroll16(int& n, int16_t const*& str, __m128i& r
   res = _mm_add_epi32(res, _mm_add_epi32(squash(res0, res1), squash(res2, res3)));
 }
 
-inline void polyHashSSEUnalignedUnroll8(int& n, int16_t const*& str, __m128i& res) {
+inline void polyHashSSEUnalignedUnroll8(int& n, uint16_t const*& str, __m128i& res) {
   if (n < 2) return;
 
   res = _mm_mullo_epi32(res, *reinterpret_cast<__m128i*>(b8.values));
@@ -257,8 +257,8 @@ inline void polyHashSSEUnalignedUnroll8(int& n, int16_t const*& str, __m128i& re
   __m128i res1 = _mm_setzero_si128();
 
   do {
-    __m128i x0_7  = _mm_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str));
-    __m128i x8_15 = _mm_cvtepi16_epi32(*reinterpret_cast<__m128i const*>(str + 4));
+    __m128i x0_7  = _mm_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str));
+    __m128i x8_15 = _mm_cvtepu16_epi32(*reinterpret_cast<__m128i const*>(str + 4));
     res0 = _mm_mullo_epi32(res0, *reinterpret_cast<__m128i*>(b8.values));
     res1 = _mm_mullo_epi32(res1, *reinterpret_cast<__m128i*>(b8.values));
     __m128i z0_7  = _mm_mullo_epi32(x0_7,  *reinterpret_cast<__m128i*>(p64.values + 56)); // [b^7, b^6, b^5, b^4]
@@ -273,7 +273,7 @@ inline void polyHashSSEUnalignedUnroll8(int& n, int16_t const*& str, __m128i& re
   res = _mm_add_epi32(res, squash(res0, res1));
 }
 
-int polyHashSSEUnalignedUnrollUpTo8(int n, int16_t const* str) {
+int polyHashSSEUnalignedUnrollUpTo8(int n, uint16_t const* str) {
   __m128i res = _mm_setzero_si128();
 
   polyHashSSEUnalignedUnroll8(n, str, res);
@@ -282,7 +282,7 @@ int polyHashSSEUnalignedUnrollUpTo8(int n, int16_t const* str) {
   return _mm_cvtsi128_si32(res);
 }
 
-int polyHashSSEUnalignedUnrollUpTo16(int n, int16_t const* str) {
+int polyHashSSEUnalignedUnrollUpTo16(int n, uint16_t const* str) {
   __m128i res = _mm_setzero_si128();
 
   polyHashSSEUnalignedUnroll16(n, str, res);
@@ -302,7 +302,7 @@ int polyHashSSEUnalignedUnrollUpTo16(int n, int16_t const* str) {
 
 }
 
-int polyHash_x86(int length, int16_t const* str) {
+int polyHash_x86(int length, uint16_t const* str) {
   if (length < 20 || (!sseSupported && !avx2Supported)) {
     // Either vectorization is not supported or the string is too short to gain from it.
     int res = 0;

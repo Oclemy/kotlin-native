@@ -1167,7 +1167,7 @@ KInt Kotlin_String_lastIndexOfString(KString thiz, KString other, KInt fromIndex
 
 KInt Kotlin_String_hashCode(KString thiz) {
   // TODO: consider caching strings hashes.
-  return polyHash(thiz->count_, reinterpret_cast<int16_t const*>(CharArrayAddressOfElementAt(thiz, 0)));
+  return polyHash(thiz->count_, CharArrayAddressOfElementAt(thiz, 0));
 }
 
 const KChar* Kotlin_String_utf16pointer(KString message) {

@@ -5,10 +5,10 @@
 
 #include "polyhash/PolyHash.h"
 
-int polyHash_x86(int length, int16_t const* str);
-int polyHash_arm(int length, int16_t const* str);
+int polyHash_x86(int length, uint16_t const* str);
+int polyHash_arm(int length, uint16_t const* str);
 
-int polyHash(int length, int16_t const* str) {
+int polyHash(int length, uint16_t const* str) {
 #if defined(__x86_64__) or defined(__i386__)
   return polyHash_x86(length, str);
 #elif defined(__arm__) or defined(__aarch64__)

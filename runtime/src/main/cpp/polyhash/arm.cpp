@@ -8,7 +8,7 @@
 #if defined(__arm__) or defined(__aarch64__)
 
 // TODO: Vectorize.
-int polyHash_arm(int length, int16_t const* str) {
+int polyHash_arm(int length, uint16_t const* str) {
   int res = 0;
   for (int i = 0; i < length; ++i)
     res = res * 31 + str[i];

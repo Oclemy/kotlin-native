@@ -10,7 +10,7 @@
 
 namespace {
 
-int polyHashNaive(int length, int16_t* str) {
+int polyHashNaive(int length, uint16_t* str) {
   int res = 0;
   for (int i = 0; i < length; ++i)
     res = res * 31 + str[i];
@@ -19,13 +19,14 @@ int polyHashNaive(int length, int16_t* str) {
 
 TEST(PolyHashTest, Correctness) {
   const int maxLength = 10000;
-  int16_t str[maxLength + 1];
-  for (int k = 1; k <= 10000; ++k) {
+  uint16_t str[maxLength + 1];
+  for (int k = 1; k <= maxLength; ++k) {
     for (int i = 0; i < k; ++i)
-      str[i] = k + i;
+      str[i] = k * maxLength + i;
     str[k] = 0;
 
-    EXPECT_EQ(polyHashNaive(k, str), polyHash(k, str));
+    for (int shift = 0; shift < 8; ++shift)
+      EXPECT_EQ(polyHashNaive(k - shift, str + shift), polyHash(k - shift, str + shift));
   }
 }
 
