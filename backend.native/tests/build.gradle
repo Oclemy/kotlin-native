@@ -192,9 +192,9 @@ konanArtifacts {
     }
 }
 
-task installTestLibrary(type: KlibInstall) {
+def installTestLib = tasks.register("installTestLibrary", KlibInstall) {
     dependsOn "compileKonanTestLibraryHost"
-    klib = konanArtifacts.testLibrary.getArtifactByTarget('host')
+    klib = project.provider { konanArtifacts.testLibrary.getArtifactByTarget('host') }
     repo = rootProject.file(testLibraryDir)
 
     doLast {
@@ -2180,7 +2180,7 @@ standaloneTest("link_testLib_explicitly") {
     // there are no testLibrary for cross targets yet.
     enabled = project.target.name == project.hostName
 
-    dependsOn 'installTestLibrary'
+    dependsOn installTestLib
     goldValue = "This is a side effect of a test library linked into the binary.\nYou should not be seeing this.\n\nHello\n"
     source = "link/omit/hello.kt"
     // We force library inclusion, so need to see the warning banner.

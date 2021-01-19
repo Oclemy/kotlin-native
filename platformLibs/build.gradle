@@ -99,7 +99,7 @@ project.rootProject.ext.platformManager.enabled.each { target ->
         }
 
         tasks.register("$libName", KlibInstall) {
-            klib = libTask.get().artifact
+            klib = project.provider { libTask.get().artifact }
             repo = file("$konanHome/klib/platform/$targetName")
             it.target = targetName
             dependsOn libTask
@@ -109,7 +109,7 @@ project.rootProject.ext.platformManager.enabled.each { target ->
         if (target in cacheableTargets) {
             tasks.register("${libName}Cache", KonanCacheTask) {
                 it.target = targetName
-                originalKlib = tasks[libName].installDir
+                originalKlib = tasks[libName].installDir.get()
                 cacheRoot = file("$konanHome/klib/cache")
 
                 dependsOn ":${targetName}StdlibCache"
@@ -140,13 +140,13 @@ project.rootProject.ext.platformManager.enabled.each { target ->
 
 // TODO: Don't install libraries here - copy them in the distPlatformLibs task
 task hostInstall {
-    dependsOn tasks.withType(KlibInstall.class).findAll {
+    dependsOn tasks.withType(KlibInstall.class).matching {
         it.target == HostManager.hostName
     }
 }
 
 task hostCache {
-    dependsOn tasks.withType(KonanCacheTask.class).findAll {
+    dependsOn tasks.withType(KonanCacheTask.class).matching {
         it.target == HostManager.hostName
     }
 }
