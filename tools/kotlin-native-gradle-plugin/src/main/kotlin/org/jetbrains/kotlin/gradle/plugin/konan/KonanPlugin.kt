@@ -32,7 +32,6 @@ import org.gradle.language.cpp.internal.NativeVariantIdentity
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.gradle.plugin.konan.KonanPlugin.Companion.COMPILE_ALL_TASK_NAME
-import org.jetbrains.kotlin.gradle.plugin.model.KonanToolingModelBuilder
 import org.jetbrains.kotlin.gradle.plugin.tasks.*
 import org.jetbrains.kotlin.konan.CURRENT
 import org.jetbrains.kotlin.konan.CompilerVersion
@@ -330,11 +329,11 @@ class KonanPlugin @Inject constructor(private val registry: ToolingModelBuilderR
             return
         }
         checkGradleVersion()
-        registry.register(KonanToolingModelBuilder)
+//        registry.register(KonanToolingModelBuilder)
         project.plugins.apply("base")
         // Create necessary tasks and extensions.
         project.tasks.create(KONAN_DOWNLOAD_TASK_NAME, KonanCompilerDownloadTask::class.java)
-        project.tasks.create(KONAN_GENERATE_CMAKE_TASK_NAME, KonanGenerateCMakeTask::class.java)
+//        project.tasks.create(KONAN_GENERATE_CMAKE_TASK_NAME, KonanGenerateCMakeTask::class.java)
         project.extensions.create(KONAN_EXTENSION_NAME, KonanExtension::class.java)
         val container = project.extensions.create(
                 KonanArtifactContainer::class.java,
@@ -366,12 +365,12 @@ class KonanPlugin @Inject constructor(private val registry: ToolingModelBuilderR
         val runTask = project.getOrCreateTask("run")
         project.afterEvaluate {
             project.konanArtifactsContainer
-                    .filterIsInstance(KonanProgram::class.java)
-                    .forEach { program ->
-                        program.forEach { compile ->
-                            compile.runTask?.let { runTask.dependsOn(it) }
-                        }
+                .filterIsInstance(KonanProgram::class.java)
+                .forEach { program ->
+                    program.tasks().forEach { compile ->
+                        compile.configure { it.runTask?.let { runTask.dependsOn(it) } }
                     }
+                }
         }
 
         // Enable multiplatform support

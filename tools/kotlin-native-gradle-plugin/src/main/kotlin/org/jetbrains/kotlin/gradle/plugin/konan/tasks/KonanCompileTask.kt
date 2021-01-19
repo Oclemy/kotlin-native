@@ -23,8 +23,6 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.*
 import org.gradle.process.CommandLineArgumentProvider
 import org.jetbrains.kotlin.gradle.plugin.konan.*
-import org.jetbrains.kotlin.gradle.plugin.model.KonanModelArtifact
-import org.jetbrains.kotlin.gradle.plugin.model.KonanModelArtifactImpl
 import org.jetbrains.kotlin.konan.library.defaultResolver
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import org.jetbrains.kotlin.konan.target.Distribution
@@ -323,28 +321,28 @@ abstract class KonanCompileTask: KonanBuildingTask(), KonanCompileSpec {
     }
     // endregion
 
-    // region IDE model
-    override fun toModelArtifact(): KonanModelArtifact {
-        val repos = libraries.repos
-        val resolver = defaultResolver(
-            repos.map { it.absolutePath },
-            konanTarget,
-            Distribution(project.konanHome)
-        )
-
-        return KonanModelArtifactImpl(
-                artifactName,
-                artifact,
-                produce,
-                konanTarget.name,
-                name,
-                allSources.filterIsInstance(ConfigurableFileTree::class.java).map { it.dir },
-                allSourceFiles,
-                libraries.asFiles(resolver),
-                repos.toList()
-        )
-    }
-    // endregion
+//    // region IDE model
+//    override fun toModelArtifact(): KonanModelArtifact {
+//        val repos = libraries.repos
+//        val resolver = defaultResolver(
+//            repos.map { it.absolutePath },
+//            konanTarget,
+//            Distribution(project.konanHome)
+//        )
+//
+//        return KonanModelArtifactImpl(
+//                artifactName,
+//                artifact,
+//                produce,
+//                konanTarget.name,
+//                name,
+//                allSources.filterIsInstance(ConfigurableFileTree::class.java).map { it.dir },
+//                allSourceFiles,
+//                libraries.asFiles(resolver),
+//                repos.toList()
+//        )
+//    }
+//    // endregion
 
     override fun run() {
         destinationDir.mkdirs()
@@ -379,7 +377,7 @@ open class KonanCompileProgramTask: KonanCompileNativeBinary() {
     override val produce: CompilerOutputKind get() = CompilerOutputKind.PROGRAM
 
     @Internal
-    var runTask: Exec? = null
+    var runTask: TaskProvider<Exec>? = null
 
     inner class RunArgumentProvider(): CommandLineArgumentProvider {
         override fun asArguments() = project.findProperty("runArgs")?.let {
@@ -391,17 +389,17 @@ open class KonanCompileProgramTask: KonanCompileNativeBinary() {
     override fun init(config: KonanBuildingConfig<*>, destinationDir: File, artifactName: String, target: KonanTarget) {
         super.init(config, destinationDir, artifactName, target)
         if (!isCrossCompile && !project.hasProperty("konanNoRun")) {
-            runTask = project.tasks.create("run${artifactName.capitalize()}", Exec::class.java).apply {
-                group = "run"
-                dependsOn(this@KonanCompileProgramTask)
+            runTask = project.tasks.register("run${artifactName.capitalize()}", Exec::class.java) {
+                it.group = "run"
+                it.dependsOn(this@KonanCompileProgramTask)
                 val artifactPathClosure = object : Closure<String>(this) {
                     override fun call() = artifactPath
                 }
                 // Use GString to evaluate a path to the artifact lazily thus allow changing it at configuration phase.
                 val lazyArtifactPath = GStringImpl(arrayOf(artifactPathClosure), arrayOf(""))
-                executable(lazyArtifactPath)
+                it.executable(lazyArtifactPath)
                 // Add values passed in the runArgs project property as arguments.
-                argumentProviders.add(RunArgumentProvider())
+                it.argumentProviders.add(RunArgumentProvider())
             }
         }
     }

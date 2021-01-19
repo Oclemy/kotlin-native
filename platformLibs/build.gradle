@@ -58,11 +58,11 @@ project.rootProject.ext.platformManager.enabled.each { target ->
 
     def targetName = target.visibleName
 
-    ArrayList<Task> installTasks = []
-    ArrayList<Task> cacheTasks = []
+    ArrayList<TaskProvider> installTasks = []
+    ArrayList<TaskProvider> cacheTasks = []
 
     if (target in cacheableTargets) {
-        task "${targetName}StdlibCache"(type: KonanCacheTask) {
+        tasks.register("${targetName}StdlibCache", KonanCacheTask) {
             it.target = targetName
             originalKlib = file("$konanHome/klib/common/stdlib")
             cacheRoot = file("$konanHome/klib/cache")
@@ -76,7 +76,7 @@ project.rootProject.ext.platformManager.enabled.each { target ->
         def fileNamePrefix = PlatformLibsInfo.namePrefix
 
         konanArtifacts {
-            interop (libName, targets: [targetName]) {
+            interop(libName, targets: [targetName]) {
                 defFile df.file
                 artifactName "${fileNamePrefix}${df.name}"
                 noDefaultLibs true
@@ -92,21 +92,22 @@ project.rootProject.ext.platformManager.enabled.each { target ->
         }
 
         def libTask = konanArtifacts."$libName"."$targetName"
-        libTask.dependsOn df.config.depends.collect{ defFileToLibName(targetName, it) }
-        libTask.dependsOn ":${targetName}CrossDist"
-        libTask.enableParallel = true
+        libTask.configure {
+            it.dependsOn df.config.depends.collect { defFileToLibName(targetName, it) }
+            it.dependsOn ":${targetName}CrossDist"
+            it.enableParallel = true
+        }
 
-        task "$libName"(type: KlibInstall) {
-            klib = libTask.artifact
+        tasks.register("$libName", KlibInstall) {
+            klib = libTask.get().artifact
             repo = file("$konanHome/klib/platform/$targetName")
             it.target = targetName
             dependsOn libTask
-
+            installTasks.add(it)
         }
-        installTasks.add(tasks[libName])
 
         if (target in cacheableTargets) {
-            task "${libName}Cache"(type: KonanCacheTask) {
+            tasks.register("${libName}Cache", KonanCacheTask) {
                 it.target = targetName
                 originalKlib = tasks[libName].installDir
                 cacheRoot = file("$konanHome/klib/cache")
@@ -123,12 +124,12 @@ project.rootProject.ext.platformManager.enabled.each { target ->
         }
     }
 
-    task "${targetName}Install" {
+    tasks.register("${targetName}Install") {
         dependsOn installTasks
     }
 
     if (target in cacheableTargets) {
-        task "${targetName}Cache" {
+        tasks.register("${targetName}Cache") {
             dependsOn cacheTasks
 
             group = BasePlugin.BUILD_GROUP

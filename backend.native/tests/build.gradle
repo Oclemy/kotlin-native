@@ -193,7 +193,7 @@ konanArtifacts {
 }
 
 task installTestLibrary(type: KlibInstall) {
-    dependsOn compileKonanTestLibraryHost
+    dependsOn "compileKonanTestLibraryHost"
     klib = konanArtifacts.testLibrary.getArtifactByTarget('host')
     repo = rootProject.file(testLibraryDir)
 
@@ -3739,7 +3739,7 @@ createInterop("embedStaticLibraries") {
     // Note: also hardcoded in def file.
     final String libDir = "$buildDir/embedStaticLibraries/"
 
-    it.getByTarget(target.name).doFirst {
+    it.getByTarget(target.name).get().doFirst {
         1.upto(4) {
             UtilsKt.buildStaticLibrary(
                     project,
