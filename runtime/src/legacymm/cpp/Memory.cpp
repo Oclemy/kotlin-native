@@ -61,7 +61,7 @@
 // Define to 1 to print all memory operations.
 #define TRACE_MEMORY 0
 // Define to 1 to print major GC events.
-#define TRACE_GC 0
+#define TRACE_GC 1
 // Collect memory manager events statistics.
 #define COLLECT_STATISTIC 0
 // Define to 1 to print detailed time statistics for GC events.
@@ -70,6 +70,9 @@
 #if COLLECT_STATISTIC
 #include <algorithm>
 #endif
+
+#define AssertGCStateRunnable() AssertGCState(kotlin::mm::ThreadState::kRunnable)
+#define AssertGCStateNative() AssertGCState(kotlin::mm::ThreadState::kNative)
 
 namespace {
 
@@ -701,6 +704,8 @@ struct MemoryState {
 
   uint64_t allocSinceLastGc;
   uint64_t allocSinceLastGcThreshold;
+
+  std::atomic<kotlin::mm::ThreadState> gcState;
 #endif // USE_GC
 
   // A stack of initializing singletons.
@@ -2061,6 +2066,7 @@ MemoryState* initMemory(bool firstRuntime) {
   memoryState->roots = konanConstructInstance<ContainerHeaderList>();
   memoryState->gcInProgress = false;
   memoryState->gcSuspendCount = 0;
+  memoryState->gcState = kotlin::mm::ThreadState::kRunnable;
   memoryState->toRelease = konanConstructInstance<ContainerHeaderList>();
   initGcThreshold(memoryState, kGcThreshold);
   initGcCollectCyclesThreshold(memoryState, kMaxToFreeSizeThreshold);
@@ -2161,6 +2167,7 @@ void makeShareable(ContainerHeader* container) {
 
 template<bool Strict>
 void setStackRef(ObjHeader** location, const ObjHeader* object) {
+  AssertGCStateRunnable();
   MEMORY_LOG("SetStackRef *%p: %p\n", location, object)
   UPDATE_REF_EVENT(memoryState, nullptr, object, location, 1);
   if (!Strict && object != nullptr)
@@ -2170,6 +2177,7 @@ void setStackRef(ObjHeader** location, const ObjHeader* object) {
 
 template<bool Strict>
 void setHeapRef(ObjHeader** location, const ObjHeader* object) {
+  AssertGCStateRunnable();
   MEMORY_LOG("SetHeapRef *%p: %p\n", location, object)
   UPDATE_REF_EVENT(memoryState, nullptr, object, location, 0);
   if (object != nullptr)
@@ -2178,6 +2186,7 @@ void setHeapRef(ObjHeader** location, const ObjHeader* object) {
 }
 
 void zeroHeapRef(ObjHeader** location) {
+  AssertGCStateRunnable();
   MEMORY_LOG("ZeroHeapRef %p\n", location)
   auto* value = *location;
   if (reinterpret_cast<uintptr_t>(value) > 1) {
@@ -2189,6 +2198,7 @@ void zeroHeapRef(ObjHeader** location) {
 
 template<bool Strict>
 void zeroStackRef(ObjHeader** location) {
+  AssertGCStateRunnable();
   MEMORY_LOG("ZeroStackRef %p\n", location)
   if (Strict) {
     *location = nullptr;
@@ -2201,6 +2211,7 @@ void zeroStackRef(ObjHeader** location) {
 
 template <bool Strict>
 void updateHeapRef(ObjHeader** location, const ObjHeader* object) {
+  AssertGCStateRunnable();
   UPDATE_REF_EVENT(memoryState, *location, object, location, 0);
   ObjHeader* old = *location;
   if (old != object) {
@@ -2216,6 +2227,7 @@ void updateHeapRef(ObjHeader** location, const ObjHeader* object) {
 
 template <bool Strict>
 void updateStackRef(ObjHeader** location, const ObjHeader* object) {
+  AssertGCStateRunnable();
   UPDATE_REF_EVENT(memoryState, *location, object, location, 1)
   RuntimeAssert(object != reinterpret_cast<ObjHeader*>(1), "Markers disallowed here");
   if (Strict) {
@@ -2236,10 +2248,12 @@ void updateStackRef(ObjHeader** location, const ObjHeader* object) {
 
 template <bool Strict>
 void updateReturnRef(ObjHeader** returnSlot, const ObjHeader* value) {
+  AssertGCStateRunnable();
   updateStackRef<Strict>(returnSlot, value);
 }
 
 void updateHeapRefIfNull(ObjHeader** location, const ObjHeader* object) {
+  AssertGCStateRunnable();
   if (object != nullptr) {
 #if KONAN_NO_THREADS
     ObjHeader* old = *location;
@@ -2282,6 +2296,7 @@ inline void checkIfForceCyclicGcNeeded(MemoryState* state) {
 
 template <bool Strict>
 OBJ_GETTER(allocInstance, const TypeInfo* type_info) {
+  AssertGCStateRunnable(); // TODO: Where should be the state transition?
   RuntimeAssert(type_info->instanceSize_ >= 0, "must be an object");
   auto* state = memoryState;
 #if USE_GC
@@ -2312,6 +2327,7 @@ OBJ_GETTER(allocInstance, const TypeInfo* type_info) {
 
 template <bool Strict>
 OBJ_GETTER(allocArrayInstance, const TypeInfo* type_info, int32_t elements) {
+  AssertGCStateRunnable(); // TODO: Where should be the state transition?
   RuntimeAssert(type_info->instanceSize_ < 0, "must be an array");
   if (elements < 0) ThrowIllegalArgumentException();
   auto* state = memoryState;
@@ -2332,6 +2348,7 @@ OBJ_GETTER(allocArrayInstance, const TypeInfo* type_info, int32_t elements) {
 template <bool Strict>
 OBJ_GETTER(initThreadLocalSingleton,
     ObjHeader** location, const TypeInfo* typeInfo, void (*ctor)(ObjHeader*)) {
+  AssertGCStateRunnable();
   ObjHeader* value = *location;
   if (value != nullptr) {
     // OK'ish, inited by someone else.
@@ -2381,6 +2398,7 @@ OBJ_GETTER(initSingleton, ObjHeader** location, const TypeInfo* typeInfo, void (
   }
 #endif  // KONAN_NO_EXCEPTIONS
 #else  // KONAN_NO_THREADS
+  AssertGCStateRunnable(); // TODO: Should we add the same check in KONAN_NO_THREADS ^^^
   // Search from the top of the stack.
   for (auto it = memoryState->initializingSingletons.rbegin(); it != memoryState->initializingSingletons.rend(); ++it) {
     if (it->first == location) {
@@ -2390,6 +2408,7 @@ OBJ_GETTER(initSingleton, ObjHeader** location, const TypeInfo* typeInfo, void (
 
   ObjHeader* initializing = reinterpret_cast<ObjHeader*>(1);
 
+  // TODO: Shouldn't we have the safe state during this lock?
   // Spin lock.
   ObjHeader* value = nullptr;
   while ((value = __sync_val_compare_and_swap(location, nullptr, initializing)) == initializing);
@@ -2442,6 +2461,8 @@ inline int32_t computeCookie() {
 
 OBJ_GETTER(swapHeapRefLocked,
     ObjHeader** location, ObjHeader* expectedValue, ObjHeader* newValue, int32_t* spinlock, int32_t* cookie) {
+  // TODO: We have a lock here. Think about it.
+  AssertGCStateRunnable();
   lock(spinlock);
   ObjHeader* oldValue = *location;
   bool shallRemember = false;
@@ -2472,6 +2493,8 @@ OBJ_GETTER(swapHeapRefLocked,
 }
 
 void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlock, int32_t* cookie) {
+  // TODO: We have a lock here.
+  AssertGCStateRunnable();
   lock(spinlock);
   ObjHeader* oldValue = *location;
 #if USE_CYCLIC_GC
@@ -2487,6 +2510,10 @@ void setHeapRefLocked(ObjHeader** location, ObjHeader* newValue, int32_t* spinlo
 }
 
 OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
+  // TODO: We have a lock here. Do we even need to have the unsafe state here?
+  // TODO: Why do we even need all these methods?
+  // TODO: What is remember container?
+  AssertGCStateRunnable();
   MEMORY_LOG("ReadHeapRefLocked: %p\n", location)
   lock(spinlock);
   ObjHeader* value = *location;
@@ -2505,6 +2532,7 @@ OBJ_GETTER(readHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* 
 }
 
 OBJ_GETTER(readHeapRefNoLock, ObjHeader* object, KInt index) {
+  AssertGCStateRunnable();
   MEMORY_LOG("ReadHeapRefNoLock: %p index %d\n", object, index)
   ObjHeader** location = reinterpret_cast<ObjHeader**>(
     reinterpret_cast<uintptr_t>(object) + object->type_info()->objOffsets_[index]);
@@ -2520,6 +2548,7 @@ OBJ_GETTER(readHeapRefNoLock, ObjHeader* object, KInt index) {
 
 template <bool Strict>
 void enterFrame(ObjHeader** start, int parameters, int count) {
+  AssertGCStateRunnable(); // Changing the shadow stack.
   MEMORY_LOG("EnterFrame %p: %d parameters %d locals\n", start, parameters, count)
   FrameOverlay* frame = reinterpret_cast<FrameOverlay*>(start);
   if (Strict) {
@@ -2533,6 +2562,7 @@ void enterFrame(ObjHeader** start, int parameters, int count) {
 
 template <bool Strict>
 void leaveFrame(ObjHeader** start, int parameters, int count) {
+  AssertGCStateRunnable(); // Access to the shadow stack. TODO: Do we really need to have the unafe state here?
   MEMORY_LOG("LeaveFrame %p: %d parameters %d locals\n", start, parameters, count)
   FrameOverlay* frame = reinterpret_cast<FrameOverlay*>(start);
   if (Strict) {
@@ -2673,6 +2703,8 @@ OBJ_GETTER(adoptStablePointer, KNativePtr pointer) {
 }
 
 bool clearSubgraphReferences(ObjHeader* root, bool checked) {
+  // TODO: Do we need the unsafe state here?
+  AssertGCStateRunnable();
 #if USE_GC
   MEMORY_LOG("ClearSubgraphReferences %p\n", root)
   if (root == nullptr) return true;
@@ -2748,6 +2780,7 @@ bool clearSubgraphReferences(ObjHeader* root, bool checked) {
 }
 
 void freezeAcyclic(ContainerHeader* rootContainer, ContainerHeaderSet* newlyFrozen) {
+  // TODO: It doesn't change the object graph so probably we don't need the unsafe state here.
   KStdDeque<ContainerHeader*> queue;
   queue.push_back(rootContainer);
   while (!queue.empty()) {
@@ -2909,6 +2942,7 @@ void runFreezeHooksRecursive(ObjHeader* root) {
  * references could be passed across multiple threads.
  */
 void freezeSubgraph(ObjHeader* root) {
+  AssertGCStateRunnable();
   if (root == nullptr) return;
   // First check that passed object graph has no cycles.
   // If there are cycles - run graph condensation on cyclic graphs using Kosoraju-Sharir.
@@ -3404,6 +3438,7 @@ RUNTIME_NOTHROW void UpdateReturnRefRelaxed(ObjHeader** returnSlot, const ObjHea
 }
 
 RUNTIME_NOTHROW void ZeroArrayRefs(ArrayHeader* array) {
+  AssertGCStateRunnable();
   for (uint32_t index = 0; index < array->count_; ++index) {
     ObjHeader** location = ArrayAddressOfElementAt(array, index);
     zeroHeapRef(location);
@@ -3672,12 +3707,38 @@ void CheckGlobalsAccessible() {
         ThrowIncorrectDereferenceException();
 }
 
+void AssertGCState(kotlin::mm::ThreadState expected) {
+    RuntimeAssert(::memoryState->gcState == expected, "Unexpected GC state. Expected: %s. Actual: %s",
+                  gcstateToString(expected), gcstateToString(::memoryState->gcState))
+}
+
 ALWAYS_INLINE RUNTIME_NOTHROW void Kotlin_mm_switchThreadStateNative() {
-    // no-op, used by the new MM only.
+    // TODO: Replace with no-op since we don't need states in the legacy MM.
+    AssertGCState(kotlin::mm::ThreadState::kRunnable);
+    GC_LOG("Switch to Native GC state\n");
+    ::memoryState->gcState = kotlin::mm::ThreadState::kNative;
 }
 
 ALWAYS_INLINE RUNTIME_NOTHROW void Kotlin_mm_switchThreadStateRunnable() {
-    // no-op, used by the new MM only.
+    // TODO: Replace with no-op since we don't need states in the legacy MM.
+    AssertGCState(kotlin::mm::ThreadState::kNative);
+    GC_LOG("Switch to Runnable GC state\n");
+    ::memoryState->gcState = kotlin::mm::ThreadState::kRunnable;
 }
 
 } // extern "C"
+
+kotlin::mm::CurrentThreadStateGuard::CurrentThreadStateGuard(ThreadState state) noexcept {
+    RuntimeAssert(::memoryState->gcState != state,
+                  "Unexpected GC state. Expected: %s. Actual: %s\n",
+                  gcstateToString(state), gcstateToString(::memoryState->gcState));
+
+    GC_LOG("Switch to %s GC state\n", gcstateToString(state));
+    oldState_ = ::memoryState->gcState;
+    ::memoryState->gcState = state;
+}
+
+kotlin::mm::CurrentThreadStateGuard::~CurrentThreadStateGuard() noexcept {
+    GC_LOG("Switch to %s GC state\n", gcstateToString(oldState_));
+    ::memoryState->gcState = oldState_;
+}

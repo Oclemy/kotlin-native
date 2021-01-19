@@ -22,6 +22,9 @@
 #include "TypeInfo.h"
 #include "Atomic.h"
 #include "PointerBits.h"
+#include "Utils.hpp"
+
+#include <memory>
 
 typedef enum {
   // Must match to permTag() in Kotlin.
@@ -346,5 +349,26 @@ class ExceptionObjHolder {
  private:
    ObjHeader* obj_;
 };
+
+// TODO: Add a comment
+namespace kotlin {
+namespace mm {
+
+enum class ThreadState {
+    kRunnable, kNative
+};
+
+// TODO: Can we make it better?
+// TODO: Add tests
+class CurrentThreadStateGuard final : private Pinned {
+public:
+    CurrentThreadStateGuard(ThreadState state) noexcept;
+    ~CurrentThreadStateGuard() noexcept;
+private:
+    ThreadState oldState_;
+};
+
+} // namespace mm
+} // namespace kotlin
 
 #endif // RUNTIME_MEMORY_H

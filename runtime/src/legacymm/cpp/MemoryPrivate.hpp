@@ -17,6 +17,7 @@
 #ifndef RUNTIME_MEMORYPRIVATE_HPP
 #define RUNTIME_MEMORYPRIVATE_HPP
 
+#include <Utils.hpp>
 #include "Memory.h"
 
 typedef enum {
@@ -327,6 +328,19 @@ MODEL_VARIANTS(void, LeaveFrame, ObjHeader** start, int parameters, int count);
 
 MODEL_VARIANTS(void, ReleaseHeapRef, const ObjHeader* object);
 MODEL_VARIANTS(void, ReleaseHeapRefNoCollect, const ObjHeader* object);
+
+inline const char* gcstateToString(kotlin::mm::ThreadState state) {
+    switch (state) {
+        case kotlin::mm::ThreadState::kRunnable:
+            return "Runnable";
+        case kotlin::mm::ThreadState::kNative:
+            return "Native";
+        default:
+            __builtin_unreachable();
+    }
+}
+
+void AssertGCState(kotlin::mm::ThreadState expected);
 
 }  // extern "C"
 

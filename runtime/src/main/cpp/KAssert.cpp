@@ -133,11 +133,13 @@ RUNTIME_NORETURN NO_INLINE void RuntimeAssertFailed(const char* location, const 
 // third-party libraries that use it (despite the fact it is not a public API).
 // Keeping the function here for now for backward compatibility, to be removed later.
 RUNTIME_NORETURN void RuntimeAssertFailed(const char* location, const char* message) {
-  char buf[1024];
-  if (location != nullptr)
-      konan::snprintf(buf, sizeof(buf), "%s: runtime assert: %s\n", location, message);
-  else
-      konan::snprintf(buf, sizeof(buf), "runtime assert: %s\n", message);
-  konan::consoleErrorUtf8(buf, konan::strnlen(buf, sizeof(buf)));
-  konan::abort();
+    char buf[1024];
+    if (location != nullptr)
+        konan::snprintf(buf, sizeof(buf), "%s: runtime assert: %s\n", location, message);
+    else
+        konan::snprintf(buf, sizeof(buf), "runtime assert: %s\n", message);
+    konan::consoleErrorUtf8(buf, konan::strnlen(buf, sizeof(buf)));
+    konan::consoleErrorf("\n");
+    printStackTrace();
+    konan::abort();
 }

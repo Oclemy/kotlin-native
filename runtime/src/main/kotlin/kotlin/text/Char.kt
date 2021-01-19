@@ -6,29 +6,34 @@
 package kotlin.text
 
 import kotlin.IllegalArgumentException
+import kotlin.native.internal.GCCritical
 
 /**
  * Returns `true` if this character (Unicode code point) is defined in Unicode.
  */
 @SymbolName("Kotlin_Char_isDefined")
+@GCCritical
 external public fun Char.isDefined(): Boolean
 
 /**
  * Returns `true` if this character is a letter.
  */
 @SymbolName("Kotlin_Char_isLetter")
+@GCCritical
 external public fun Char.isLetter(): Boolean
 
 /**
  * Returns `true` if this character is a letter or digit.
  */
 @SymbolName("Kotlin_Char_isLetterOrDigit")
+@GCCritical
 external public fun Char.isLetterOrDigit(): Boolean
 
 /**
  * Returns `true` if this character (Unicode code point) is a digit.
  */
 @SymbolName("Kotlin_Char_isDigit")
+@GCCritical
 external public fun Char.isDigit(): Boolean
 
 /**
@@ -36,12 +41,14 @@ external public fun Char.isDigit(): Boolean
  * character in a Java identifier or a Unicode identifier.
  */
 @SymbolName("Kotlin_Char_isIdentifierIgnorable")
+@GCCritical
 external public fun Char.isIdentifierIgnorable(): Boolean
 
 /**
  * Returns `true` if this character is an ISO control character.
  */
 @SymbolName("Kotlin_Char_isISOControl")
+@GCCritical
 external public fun Char.isISOControl(): Boolean
 
 /**
@@ -49,48 +56,56 @@ external public fun Char.isISOControl(): Boolean
  * Returns `true` if the character is whitespace.
  */
 @SymbolName("Kotlin_Char_isWhitespace")
+@GCCritical
 external public actual fun Char.isWhitespace(): Boolean
 
 /**
  * Returns `true` if this character is upper case.
  */
 @SymbolName("Kotlin_Char_isUpperCase")
+@GCCritical
 external public fun Char.isUpperCase(): Boolean
 
 /**
  * Returns `true` if this character is lower case.
  */
 @SymbolName("Kotlin_Char_isLowerCase")
+@GCCritical
 external public fun Char.isLowerCase(): Boolean
 
 /**
  * Converts this character to uppercase.
  */
 @SymbolName("Kotlin_Char_toUpperCase")
+@GCCritical
 external public actual fun Char.toUpperCase(): Char
 
 /**
  * Converts this character to lowercase.
  */
 @SymbolName("Kotlin_Char_toLowerCase")
+@GCCritical
 external public actual fun Char.toLowerCase(): Char
 
 /**
  * Returns `true` if this character is a Unicode high-surrogate code unit (also known as leading-surrogate code unit).
  */
 @SymbolName("Kotlin_Char_isHighSurrogate")
+@GCCritical
 external public actual fun Char.isHighSurrogate(): Boolean
 
 /**
  * Returns `true` if this character is a Unicode low-surrogate code unit (also known as trailing-surrogate code unit).
  */
 @SymbolName("Kotlin_Char_isLowSurrogate")
+@GCCritical
 external public actual fun Char.isLowSurrogate(): Boolean
 
 
 internal actual fun digitOf(char: Char, radix: Int): Int = digitOfChecked(char, checkRadix(radix))
 
 @SymbolName("Kotlin_Char_digitOfChecked")
+@GCCritical
 external internal fun digitOfChecked(char: Char, radix: Int): Int
 
 /**
@@ -100,6 +115,7 @@ public val Char.category: CharCategory get() = CharCategory.valueOf(getType())
 
 /** Retrun a Unicode category of the character as an Int. */
 @SymbolName("Kotlin_Char_getType")
+@GCCritical
 external internal fun Char.getType(): Int
 
 /**

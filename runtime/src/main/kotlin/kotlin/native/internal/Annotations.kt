@@ -145,3 +145,13 @@ internal annotation class HasFinalizer
 @RequiresOptIn(level = RequiresOptIn.Level.ERROR)
 @Retention(value = AnnotationRetention.BINARY)
 internal annotation class InternalForKotlinNative
+
+// TODO: Add a RequiresOptIn or @InternalForKotlinNative?
+// TODO: Add a frontend check that the annotated function is external.
+// TODO: Add a parameter "reason" to explain why a call is a GCCritical
+/**
+ * Marks an external function whose call should not be wrapped with GC thread state switches.
+ */
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR)
+@Retention(value = AnnotationRetention.BINARY)
+internal annotation class GCCritical
