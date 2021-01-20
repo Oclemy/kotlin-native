@@ -168,29 +168,6 @@ open class KonanInteropTask @Inject constructor(@Internal val workerExecutor: Wo
 
     // endregion
 
-//    // region IDE model
-//    override fun toModelArtifact(): KonanModelArtifact {
-//        val repos = libraries.repos
-//        val resolver = defaultResolver(
-//            repos.map { it.absolutePath },
-//            konanTarget,
-//            Distribution(project.konanHome)
-//        )
-//
-//        return KonanModelArtifactImpl(
-//                artifactName,
-//                artifact,
-//                CompilerOutputKind.LIBRARY,
-//                konanTarget.name,
-//                name,
-//                listOfNotNull(defFile.parentFile),
-//                listOf(defFile),
-//                libraries.asFiles(resolver),
-//                repos.toList()
-//        )
-//    }
-//    // endregion
-
     internal interface RunToolParameters: WorkParameters {
         var taskName: String
         var args: List<String>
