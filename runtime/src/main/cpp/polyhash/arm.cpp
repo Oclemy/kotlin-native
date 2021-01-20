@@ -4,6 +4,7 @@
  */
 
 #include "polyhash/common.h"
+#include "polyhash/arm.h"
 
 #if defined(__arm__) or defined(__aarch64__)
 
@@ -187,10 +188,7 @@ int polyHashNeonUnalignedUnrollUpTo32(int n, uint16_t const* str) {
 int polyHash_arm(int length, uint16_t const* str) {
     if (!neonSupported) {
         // Vectorization is not supported.
-        int res = 0;
-        for (int i = 0; i < length; ++i)
-            res = res * 31 + str[i];
-        return res;
+        return polyHash_naive(length, str);
     }
     int res;
     if (length < 488)

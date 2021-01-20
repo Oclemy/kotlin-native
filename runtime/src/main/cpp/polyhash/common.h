@@ -8,6 +8,7 @@
 
 #include <array>
 #include <cstdint>
+#include "polyhash/naive.h"
 
 constexpr uint32_t Power(uint32_t base, uint8_t exponent) {
     uint32_t result = 1;

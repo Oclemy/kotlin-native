@@ -4,6 +4,7 @@
  */
 
 #include "polyhash/common.h"
+#include "polyhash/x86.h"
 
 #if defined(__x86_64__) or defined(__i386__)
 
@@ -304,10 +305,7 @@ int polyHashSSEUnalignedUnrollUpTo16(int n, uint16_t const* str) {
 int polyHash_x86(int length, uint16_t const* str) {
     if (length < 20 || (!sseSupported && !avx2Supported)) {
         // Either vectorization is not supported or the string is too short to gain from it.
-        int res = 0;
-        for (int i = 0; i < length; ++i)
-            res = res * 31 + str[i];
-        return res;
+        return polyHash_naive(length, str);
     }
     int res;
     if (length < 32)

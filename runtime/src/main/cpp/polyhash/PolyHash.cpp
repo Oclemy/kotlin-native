@@ -4,20 +4,18 @@
  */
 
 #include "polyhash/PolyHash.h"
+#include "polyhash/naive.h"
+#include "polyhash/x86.h"
+#include "polyhash/arm.h"
 
-int polyHash_x86(int length, uint16_t const* str);
 int polyHash_arm(int length, uint16_t const* str);
 
 int polyHash(int length, uint16_t const* str) {
 #if defined(__x86_64__) or defined(__i386__)
-  return polyHash_x86(length, str);
+    return polyHash_x86(length, str);
 #elif defined(__arm__) or defined(__aarch64__)
-  return polyHash_arm(length, str);
+    return polyHash_arm(length, str);
 #else
-  // Default naive impl.
-  int res = 0;
-  for (int i = 0; i < length; ++i)
-    res = res * 31 + str[i];
-  return res;
+    return polyHash_naive(length, str);
 #endif
 }
