@@ -13,14 +13,13 @@ import java.io.File
 
 // TODO: Implement as a part of the gradle plugin
 open class KlibInstall: Exec() {
-    @InputFile
+    @Input
     lateinit var klib: Provider<File>
 
     @Input
     var repo: File = project.rootDir
 
     val installDir: Provider<File>
-        @OutputDirectory
         get() = project.provider {
             val klibName = klib.get().nameWithoutExtension
             project.file("${repo.absolutePath}/$klibName")
