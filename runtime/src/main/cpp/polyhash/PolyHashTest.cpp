@@ -4,18 +4,12 @@
  */
 
 #include "polyhash/PolyHash.h"
+#include "polyhash/naive.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace {
-
-int polyHashNaive(int length, uint16_t* str) {
-  int res = 0;
-  for (int i = 0; i < length; ++i)
-    res = res * 31 + str[i];
-  return res;
-}
 
 TEST(PolyHashTest, Correctness) {
   const int maxLength = 10000;
