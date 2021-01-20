@@ -6,77 +6,35 @@
 #ifndef RUNTIME_POLYHASH_COMMON_H
 #define RUNTIME_POLYHASH_COMMON_H
 
-#include <stdint.h>
+#include <array>
+#include <cstdint>
 
-template <int... Values>
-struct IntList;
+constexpr uint32_t Power(uint32_t base, uint8_t exponent) {
+    uint32_t result = 1;
+    for (uint8_t i = 0; i < exponent; ++i) {
+        result *= base;
+    }
+    return result;
+}
 
-template<>
-struct IntList<> {};
+template <uint8_t Exponent>
+constexpr std::array<uint32_t, Exponent> DecreasingPowers(uint32_t base) {
+    std::array<uint32_t, Exponent> result = {};
+    uint32_t current = 1;
+    for (auto it = result.rbegin(); it != result.rend(); ++it) {
+        *it = current;
+        current *= base;
+    }
+    return result;
+}
 
-template<int... Values>
-struct Length;
-
-template<int H, int... T>
-struct Length<H, T...> {
-    static const int value = 1 + Length<T...>::value;
-};
-
-template<>
-struct Length<> {
-    static const int value = 0;
-};
-
-template<typename IL1, typename IL2>
-struct Concat;
-
-template<int... Is1, int... Is2>
-struct Concat<IntList<Is1...>, IntList<Is2...>> {
-    using type = IntList<Is1..., Is2...>;
-};
-
-template<int N>
-struct Descent {
-    using type = typename Concat<IntList<N - 1>, typename Descent<N - 1>::type>::type;
-};
-
-template<>
-struct Descent<0> {
-    using type = IntList<>;
-};
-
-template<int N, int K>
-struct Repeat {
-    using type = typename Concat<IntList<K>, typename Repeat<N - 1, K>::type>::type;
-};
-
-template<int K>
-struct Repeat<0, K> {
-    using type = IntList<>;
-};
-
-template<int B, int K>
-struct Power {
-    static const int value = (Power<B, K - 1>::value * static_cast<int64_t>(B)) & 0xFFFFFFFF;
-};
-
-template<int B>
-struct Power<B, 0> {
-    static const int value = 1;
-};
-
-template<int B, typename T>
-struct Powers;
-
-template<int B, int... Values>
-struct Powers<B, IntList<Values...>> {
-    __attribute__((aligned(32))) int values[Length<Values...>::value] = { Power<B, Values>::value... };
-};
-
-template<int B, int K>
-struct DecreasingPowers : Powers<B, typename Descent<K>::type> { };
-
-template<int B, int N, int K>
-struct RepeatingPowers : Powers<B, typename Repeat<N, K>::type> { };
+template <size_t Count>
+constexpr std::array<uint32_t, Count> RepeatingPowers(uint32_t base, uint8_t exponent) {
+    std::array<uint32_t, Count> result = {};
+    uint32_t value = Power(base, exponent);
+    for (auto& element : result)
+        element = value;
+    return result;
+}
 
 #endif  // RUNTIME_POLYHASH_COMMON_H
