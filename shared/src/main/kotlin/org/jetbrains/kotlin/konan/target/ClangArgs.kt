@@ -76,21 +76,17 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
             }
 
     private val specificClangArgs: List<String> = when (target) {
-        KonanTarget.LINUX_MIPS32,
-        KonanTarget.LINUX_MIPSEL32,
-        KonanTarget.LINUX_ARM64 -> emptyList()
-
-        KonanTarget.LINUX_X64,
-        KonanTarget.MINGW_X64,
-        KonanTarget.MINGW_X86 -> listOf("-mavx2")
+        KonanTarget.LINUX_X64, 
+        KonanTarget.LINUX_MIPS32, KonanTarget.LINUX_MIPSEL32,
+        KonanTarget.LINUX_ARM64,
+        KonanTarget.MINGW_X64, KonanTarget.MINGW_X86 -> emptyList()
 
         KonanTarget.LINUX_ARM32_HFP -> listOf(
                 "-mfpu=vfp", "-mfloat-abi=hard"
         )
 
         KonanTarget.MACOS_X64 -> listOf(
-                "-mmacosx-version-min=$osVersionMin",
-                "-mavx2"
+                "-mmacosx-version-min=$osVersionMin"
         )
 
         KonanTarget.IOS_ARM32 -> listOf(
@@ -107,8 +103,7 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
 
         KonanTarget.IOS_X64 -> listOf(
                 "-stdlib=libc++",
-                "-miphoneos-version-min=$osVersionMin",
-                "-mavx2"
+                "-miphoneos-version-min=$osVersionMin"
         )
 
         KonanTarget.TVOS_ARM64 -> listOf(
@@ -119,8 +114,7 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
 
         KonanTarget.TVOS_X64 -> listOf(
                 "-stdlib=libc++",
-                "-mtvos-simulator-version-min=$osVersionMin",
-                "-mavx2"
+                "-mtvos-simulator-version-min=$osVersionMin"
         )
 
         KonanTarget.WATCHOS_ARM64,
@@ -133,18 +127,27 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
         KonanTarget.WATCHOS_X86 -> listOf(
                 "-stdlib=libc++",
                 "-arch", "i386",
-                "-mwatchos-simulator-version-min=$osVersionMin",
-                "-mavx2"
+                "-mwatchos-simulator-version-min=$osVersionMin"
         )
 
         KonanTarget.WATCHOS_X64 -> listOf(
                 "-stdlib=libc++",
-                "-mwatchos-simulator-version-min=$osVersionMin",
-                "-mavx2"
+                "-mwatchos-simulator-version-min=$osVersionMin"
         )
 
-        KonanTarget.ANDROID_ARM32, KonanTarget.ANDROID_ARM64 -> androidClangArgs()
-        KonanTarget.ANDROID_X86, KonanTarget.ANDROID_X64 -> androidClangArgs() + listOf("-mavx2")
+        KonanTarget.ANDROID_ARM32, KonanTarget.ANDROID_ARM64,
+        KonanTarget.ANDROID_X86, KonanTarget.ANDROID_X64 -> {
+            val clangTarget = targetArg!!
+            val architectureDir = Android.architectureDirForTarget(target)
+            val toolchainSysroot = "$absoluteTargetToolchain/sysroot"
+            listOf(
+                    "-D__ANDROID_API__=${Android.API}",
+                    "--sysroot=$absoluteTargetSysRoot/$architectureDir",
+                    "-I$toolchainSysroot/usr/include/c++/v1",
+                    "-I$toolchainSysroot/usr/include",
+                    "-I$toolchainSysroot/usr/include/$clangTarget"
+            )
+        }
 
         // By default WASM target forces `hidden` visibility which causes linkage problems.
         KonanTarget.WASM32 -> listOf(
@@ -177,19 +180,6 @@ class ClangArgs(private val configurables: Configurables) : Configurables by con
                 "-isystem$absoluteTargetSysRoot/include/libcxx",
                 "-isystem$absoluteTargetSysRoot/include/libc"
         ) + (configurables as ZephyrConfigurables).constructClangArgs()
-    }
-
-    private fun androidClangArgs(): List<String> {
-        val clangTarget = targetArg!!
-        val architectureDir = Android.architectureDirForTarget(target)
-        val toolchainSysroot = "$absoluteTargetToolchain/sysroot"
-        return listOf(
-                "-D__ANDROID_API__=${Android.API}",
-                "--sysroot=$absoluteTargetSysRoot/$architectureDir",
-                "-I$toolchainSysroot/usr/include/c++/v1",
-                "-I$toolchainSysroot/usr/include",
-                "-I$toolchainSysroot/usr/include/$clangTarget"
-        )
     }
 
     val clangPaths = listOf("$absoluteLlvmHome/bin", binDir)

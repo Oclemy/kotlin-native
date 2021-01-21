@@ -8,6 +8,10 @@
 
 #if defined(__x86_64__) or defined(__i386__)
 
+#include <immintrin.h>
+
+#pragma clang attribute push (__attribute__((target("avx2"))), apply_to=function)
+
 namespace {
 
 alignas(32) constexpr auto p64 = DecreasingPowers<64>(31);   // [base^63, base^62, .., base^2, base, 1]
@@ -16,8 +20,6 @@ alignas(32) constexpr auto b32 = RepeatingPowers<8>(31, 32); // [base^32, base^3
 alignas(32) constexpr auto b16 = RepeatingPowers<8>(31, 16); // [base^16, base^16, .., base^16] (8)
 alignas(32) constexpr auto b8  = RepeatingPowers<8>(31, 8);  // [base^8,  base^8,  .., base^8 ] (8)
 alignas(32) constexpr auto b4  = RepeatingPowers<8>(31, 4);  // [base^4,  base^4,  .., base^4 ] (8)
-
-#include <immintrin.h>
 
 inline __m256i squash(__m256i x, __m256i y) {
     __m256i sum = _mm256_hadd_epi32(x, y); // [x0 + x1, x2 + x3, y0 + y1, y2 + y3, x4 + x5, x6 + x7, y4 + y5, y6 + y7]
@@ -303,7 +305,7 @@ int polyHashSSEUnalignedUnrollUpTo16(int n, uint16_t const* str) {
 }
 
 int polyHash_x86(int length, uint16_t const* str) {
-    if (length < 20 || (!sseSupported && !avx2Supported)) {
+    if (length < 16 || (!sseSupported && !avx2Supported)) {
         // Either vectorization is not supported or the string is too short to gain from it.
         return polyHash_naive(length, str);
     }
@@ -324,5 +326,7 @@ int polyHash_x86(int length, uint16_t const* str) {
         res = res * 31 + str[i];
     return res;
 }
+
+#pragma clang attribute pop
 
 #endif

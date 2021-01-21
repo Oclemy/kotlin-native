@@ -8,17 +8,33 @@
 
 #if defined(__arm__) or defined(__aarch64__)
 
+#ifndef __ARM_NEON
+
+int polyHash_arm(int length, uint16_t const* str) {
+    return polyHash_naive(length, str);
+}
+
+#else
+
+#include <arm_neon.h>
+
+namespace {
+
 alignas(32) constexpr auto p32 = DecreasingPowers<32>(31);   // [base^31, base^30, .., base^2, base, 1]
 alignas(32) constexpr auto b32 = RepeatingPowers<8>(31, 32); // [base^32, base^32, .., base^32] (8)
 alignas(32) constexpr auto b16 = RepeatingPowers<8>(31, 16); // [base^16, base^16, .., base^16] (8)
 alignas(32) constexpr auto b8  = RepeatingPowers<8>(31, 8);  // [base^8,  base^8,  .., base^8 ] (8)
 alignas(32) constexpr auto b4  = RepeatingPowers<8>(31, 4);  // [base^4,  base^4,  .., base^4 ] (8)
 
-#include <arm_neon.h>
-
 inline uint32x4_t squash(uint32x4_t x, uint32x4_t y) {
     uint32x4_t sum = vaddq_u32(x, y); // [x0 + y1, x1 + y1, x2 + y2, x3 + y3]
+#ifdef __aarch64__
     return vdupq_n_u32(vaddvq_u32(sum)); // [x0..3 + y0..3, same, same, same]
+#else
+    uint32_t arr[4];
+    vst1q_u32(arr, sum);
+    return vdupq_n_u32(arr[0] + arr[1] + arr[2] + arr[3]); // [x0..3 + y0..3, same, same, same]
+#endif
 }
 
 inline void polyHashNeonUnalignedTail(int n, uint16_t const* str, uint32x4_t& res) {
@@ -28,7 +44,13 @@ inline void polyHashNeonUnalignedTail(int n, uint16_t const* str, uint32x4_t& re
     uint32x4_t z4_7 = vmulq_u32(x4_7, *reinterpret_cast<uint32x4_t const*>(&p32[28])); // [b^3, b^2, b, 1]
 
     res = vmulq_u32(res, *reinterpret_cast<uint32x4_t const*>(&b4[0]));
+#ifdef __aarch64__
     uint32x4_t sum = vdupq_n_u32(vaddvq_u32(z4_7));
+#else
+    uint32_t arr[4];
+    vst1q_u32(arr, z4_7);
+    uint32x4_t sum = vdupq_n_u32(arr[0] + arr[1] + arr[2] + arr[3]);
+#endif
     res = vaddq_u32(res, sum);
 }
 
@@ -201,4 +223,6 @@ int polyHash_arm(int length, uint16_t const* str) {
     return res;
 }
 
-#endif
+#endif // __ARM_NEON
+
+#endif // defined(__arm__) or defined(__aarch64__)

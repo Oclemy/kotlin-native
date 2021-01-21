@@ -8,8 +8,6 @@
 #include "polyhash/x86.h"
 #include "polyhash/arm.h"
 
-int polyHash_arm(int length, uint16_t const* str);
-
 int polyHash(int length, uint16_t const* str) {
 #if defined(__x86_64__) or defined(__i386__)
     return polyHash_x86(length, str);
