@@ -207,6 +207,8 @@ int polyHashNeonUnalignedUnrollUpTo32(int n, uint16_t const* str) {
     #error "Not supported"
 #endif
 
+}
+
 int polyHash_arm(int length, uint16_t const* str) {
     if (!neonSupported) {
         // Vectorization is not supported.
