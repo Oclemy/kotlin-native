@@ -69,7 +69,7 @@ internal open class ObjCExportCodeGeneratorBase(codegen: CodeGenerator) : ObjCCo
         // TODO: it is required only for Kotlin-to-Objective-C bridges.
         this.forwardingForeignExceptionsTerminatedWith = objcTerminate
 
-        return call(function, args, resultLifetime, ExceptionHandler.Caller)
+        return call(function, args, resultLifetime, ExceptionHandler.Caller())
     }
 
     fun FunctionGenerationContext.kotlinReferenceToObjC(value: LLVMValueRef) =
@@ -1460,7 +1460,7 @@ private fun ObjCExportCodeGenerator.createObjectInstanceAdapter(
 
     return generateObjCToKotlinSyntheticGetter(selector) {
         initRuntimeIfNeeded() // For instance methods it gets called when allocating.
-        val value = getObjectValue(irClass, startLocationInfo = null, exceptionHandler = ExceptionHandler.Caller)
+        val value = getObjectValue(irClass, startLocationInfo = null, exceptionHandler = ExceptionHandler.Caller())
         ret(kotlinToObjC(value, ReferenceBridge))
     }
 }
@@ -1473,7 +1473,7 @@ private fun ObjCExportCodeGenerator.createEnumEntryAdapter(
     return generateObjCToKotlinSyntheticGetter(selector) {
         initRuntimeIfNeeded() // For instance methods it gets called when allocating.
 
-        val value = getEnumEntry(irEnumEntry, ExceptionHandler.Caller)
+        val value = getEnumEntry(irEnumEntry, ExceptionHandler.Caller())
         ret(kotlinToObjC(value, ReferenceBridge))
     }
 }

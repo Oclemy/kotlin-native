@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.backend.common.ir.allParameters
 import org.jetbrains.kotlin.backend.common.ir.allParametersCount
 import org.jetbrains.kotlin.backend.common.lower.inline.InlinerExpressionLocationHint
 import org.jetbrains.kotlin.backend.konan.*
+import org.jetbrains.kotlin.backend.konan.InternalAbi.Companion.INTERNAL_ABI_ORIGIN
 import org.jetbrains.kotlin.backend.konan.descriptors.*
 import org.jetbrains.kotlin.backend.konan.ir.*
 import org.jetbrains.kotlin.backend.konan.llvm.coverage.LLVMCoverageInstrumentation
@@ -119,6 +120,8 @@ internal interface CodeContext {
     fun genContinue(destination: IrContinue)
 
     val exceptionHandler: ExceptionHandler
+
+    val exceptionHandlerExternal: ExceptionHandler
 
     fun genThrow(exception: LLVMValueRef)
 
@@ -238,6 +241,8 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         override fun genContinue(destination: IrContinue) = unsupported()
 
         override val exceptionHandler get() = unsupported()
+
+        override val exceptionHandlerExternal get() = unsupported()
 
         override fun genThrow(exception: LLVMValueRef) = unsupported()
 
@@ -669,7 +674,10 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
             }
         }
 
-        override val exceptionHandler get() = ExceptionHandler.Caller
+        // TODO: Probably merge into a single val.
+        override val exceptionHandler get() = ExceptionHandler.Caller(false)
+        // TODO: Rename.
+        override val exceptionHandlerExternal get() = ExceptionHandler.Caller(true)
 
         override fun genThrow(exception: LLVMValueRef) {
             val objHeaderPtr = functionGenerationContext.bitcast(codegen.kObjHeaderPtr, exception)
@@ -1026,13 +1034,25 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
     private inner abstract class CatchingScope : InnerScopeImpl() {
 
         /**
-         * The LLVM `landingpad` such that if invoked function throws an exception,
+         * The LLVM `landingpad` such that if an invoked non-external function throws an exception,
          * then this exception is passed to [handler].
          */
         private val landingpad: LLVMBasicBlockRef by lazy {
             using(outerContext) {
                 functionGenerationContext.basicBlock("landingpad", endLocationInfoFromScope()) {
-                    genLandingpad()
+                    genLandingpad(false)
+                }
+            }
+        }
+
+        /**
+         * The LLVM `landingpad` such that if an invoked external function throws an exception,
+         * then this exception is passed to [handler]. Unlike [landingpad], switches the thread state to Runnable.
+         */
+        private val landingpadExternal: LLVMBasicBlockRef by lazy {
+            using(outerContext) {
+                functionGenerationContext.basicBlock("landingpad", endLocationInfoFromScope()) {
+                    genLandingpad(true)
                 }
             }
         }
@@ -1076,16 +1096,22 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
          *
          * TODO: why does `clang++` check `typeid` even if there is only one catch clause?
          */
-        private fun genLandingpad() {
+        private fun genLandingpad(switchThreadState: Boolean) {
             with(functionGenerationContext) {
-                val exceptionPtr = catchKotlinException()
+                val exceptionPtr = catchKotlinException(switchThreadState)
                 jumpToHandler(exceptionPtr)
             }
         }
 
-        override val exceptionHandler: ExceptionHandler get() = object : ExceptionHandler.Local() {
-            override val unwind get() = landingpad
-        }
+        override val exceptionHandler: ExceptionHandler
+            get() = object : ExceptionHandler.Local() {
+                override val unwind get() = landingpad
+            }
+
+        override val exceptionHandlerExternal: ExceptionHandler
+            get() = object : ExceptionHandler.Local() {
+                override val unwind get() = landingpadExternal
+            }
 
         override fun genThrow(exception: LLVMValueRef) {
             jumpToHandler(exception)
@@ -1635,7 +1661,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
             if (needMutationCheck(value.symbol.owner.parentAsClass)) {
                 functionGenerationContext.call(context.llvm.mutationCheck,
                         listOf(functionGenerationContext.bitcast(codegen.kObjHeaderPtr, thisPtr)),
-                        Lifetime.IRRELEVANT, ExceptionHandler.Caller)
+                        Lifetime.IRRELEVANT, ExceptionHandler.Caller())
 
                 if (functionGenerationContext.isObjectType(valueToAssign.type))
                     functionGenerationContext.call(context.llvm.checkLifetimesConstraint, listOf(thisPtr, valueToAssign))
@@ -2322,14 +2348,36 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
     private fun call(function: IrFunction, llvmFunction: LLVMValueRef, args: List<LLVMValueRef>,
                      resultLifetime: Lifetime): LLVMValueRef {
 
-        val exceptionHandler = function.annotations.findAnnotation(RuntimeNames.filterExceptions)?.let {
-            val foreignExceptionMode = ForeignExceptionMode.byValue(it.getAnnotationValueOrNull<String>("mode"))
-            functionGenerationContext.filteringExceptionHandler(currentCodeContext, foreignExceptionMode)
-        } ?: currentCodeContext.exceptionHandler
+        val filterExceptions = function.annotations.findAnnotation(RuntimeNames.filterExceptions)
+        val isGCCritical = function.annotations.hasAnnotation(KonanFqNames.gcCritical)
+        val needsNativeThreadState =
+                function.isExternal && function.origin != INTERNAL_ABI_ORIGIN && !isGCCritical
+        check(!function.isTypedIntrinsic)
+
+        val exceptionHandler = when {
+            filterExceptions != null -> {
+                val foreignExceptionMode = ForeignExceptionMode.byValue(
+                        filterExceptions.getAnnotationValueOrNull<String>("mode")
+                )
+                functionGenerationContext.filteringExceptionHandler(currentCodeContext, foreignExceptionMode)
+            }
+            needsNativeThreadState -> currentCodeContext.exceptionHandlerExternal
+            else -> currentCodeContext.exceptionHandler
+        }
+
+        if (needsNativeThreadState) {
+            functionGenerationContext.switchThreadState(ThreadState.Native)
+        }
 
         val result = call(llvmFunction, args, resultLifetime, exceptionHandler)
-        if (!function.isSuspend && function.returnType.isNothing()) {
-            functionGenerationContext.unreachable()
+
+        when {
+            !function.isSuspend && function.returnType.isNothing() -> {
+                functionGenerationContext.unreachable()
+            }
+            needsNativeThreadState -> {
+                functionGenerationContext.switchThreadState(ThreadState.Runnable)
+            }
         }
 
         if (LLVMGetReturnType(getFunctionType(llvmFunction)) == voidType) {
@@ -2521,7 +2569,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 // TODO: shall we put that into the try block?
                 initializers.forEach {
                     call(it, emptyList(), Lifetime.IRRELEVANT,
-                            exceptionHandler = ExceptionHandler.Caller, verbatim = true)
+                            exceptionHandler = ExceptionHandler.Caller(), verbatim = true)
                 }
                 ret(null)
             }
@@ -2536,7 +2584,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
             generateFunction(codegen, globalCtorFunction) {
                 ctorFunctions.forEach {
                     call(it, emptyList(), Lifetime.IRRELEVANT,
-                            exceptionHandler = ExceptionHandler.Caller, verbatim = true)
+                            exceptionHandler = ExceptionHandler.Caller(), verbatim = true)
                 }
                 ret(null)
             }
