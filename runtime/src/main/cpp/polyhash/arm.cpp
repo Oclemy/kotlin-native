@@ -26,32 +26,29 @@ alignas(32) constexpr auto b16 = RepeatingPowers<8>(31, 16); // [base^16, base^1
 alignas(32) constexpr auto b8  = RepeatingPowers<8>(31, 8);  // [base^8,  base^8,  .., base^8 ] (8)
 alignas(32) constexpr auto b4  = RepeatingPowers<8>(31, 4);  // [base^4,  base^4,  .., base^4 ] (8)
 
-inline uint32x4_t squash(uint32x4_t x, uint32x4_t y) {
-    uint32x4_t sum = vaddq_u32(x, y); // [x0 + y1, x1 + y1, x2 + y2, x3 + y3]
+inline uint32x4_t squash(uint32x4_t z) {
 #ifdef __aarch64__
-    return vdupq_n_u32(vaddvq_u32(sum)); // [x0..3 + y0..3, same, same, same]
+    return vdupq_n_u32(vaddvq_u32(z)); // [z0..3, same, same, same]
 #else
-    uint32_t arr[4];
-    vst1q_u32(arr, sum);
-    return vdupq_n_u32(arr[0] + arr[1] + arr[2] + arr[3]); // [x0..3 + y0..3, same, same, same]
+    uint32x2_t lo = vget_low_u32(z);   // [z0, z1]
+    uint32x2_t hi = vget_high_u32(z);  // [z2, z3]
+    uint32x2_t sum = vadd_u32(lo, hi); // [z0 + z2, z1 + z3]
+    sum = vpadd_u32(sum, sum);         // [z0..3, same]
+    return vcombine_u32(sum, sum);     // [z0..3, same, same, same]
 #endif
+}
+
+inline uint32x4_t squash(uint32x4_t x, uint32x4_t y) {
+    return squash(vaddq_u32(x, y));
 }
 
 inline void polyHashNeonUnalignedTail(int n, uint16_t const* str, uint32x4_t& res) {
     if (n == 0) return;
 
     uint32x4_t x4_7 = vmovl_u16(*reinterpret_cast<uint16x4_t const*>(str));
-    uint32x4_t z4_7 = vmulq_u32(x4_7, *reinterpret_cast<uint32x4_t const*>(&p32[28])); // [b^3, b^2, b, 1]
-
     res = vmulq_u32(res, *reinterpret_cast<uint32x4_t const*>(&b4[0]));
-#ifdef __aarch64__
-    uint32x4_t sum = vdupq_n_u32(vaddvq_u32(z4_7));
-#else
-    uint32_t arr[4];
-    vst1q_u32(arr, z4_7);
-    uint32x4_t sum = vdupq_n_u32(arr[0] + arr[1] + arr[2] + arr[3]);
-#endif
-    res = vaddq_u32(res, sum);
+    uint32x4_t z4_7 = vmulq_u32(x4_7, *reinterpret_cast<uint32x4_t const*>(&p32[28])); // [b^3, b^2, b, 1]
+    res = vaddq_u32(res, squash(z4_7));
 }
 
 inline void polyHashNeonUnalignedUnroll32(int& n, uint16_t const*& str, uint32x4_t& res) {
