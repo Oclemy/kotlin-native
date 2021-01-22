@@ -63,6 +63,9 @@ struct ObjHeader {
       return createMetaObject(this);
   }
 
+  // Returns `nullptr` if meta object is not installed.
+  MetaObjHeader* GetMetaObjHeader() const noexcept { return AsMetaObject(typeInfoOrMeta_); }
+
   ALWAYS_INLINE ObjHeader** GetWeakCounterLocation();
 
 #ifdef KONAN_OBJC_INTEROP

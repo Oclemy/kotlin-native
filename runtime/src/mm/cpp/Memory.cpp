@@ -7,6 +7,7 @@
 
 #include "Exceptions.h"
 #include "ExtraObjectData.hpp"
+#include "Freezing.hpp"
 #include "GlobalsRegistry.hpp"
 #include "KAssert.h"
 #include "Porting.h"
@@ -90,6 +91,17 @@ MetaObjHeader* ObjHeader::createMetaObject(ObjHeader* object) {
 // static
 void ObjHeader::destroyMetaObject(ObjHeader* object) {
     mm::ExtraObjectData::Uninstall(object);
+}
+
+ALWAYS_INLINE bool isFrozen(const ObjHeader* obj) {
+    if (auto* metaObject = obj->GetMetaObjHeader()) {
+        return mm::ExtraObjectData::FromMetaObjHeader(metaObject).IsFrozen();
+    }
+    return false;
+}
+
+ALWAYS_INLINE bool isPermanentOrFrozen(const ObjHeader* obj) {
+    return obj->permanent() || isFrozen(obj);
 }
 
 ALWAYS_INLINE bool isShareable(const ObjHeader* obj) {
@@ -219,12 +231,33 @@ extern "C" RUNTIME_NOTHROW OBJ_GETTER(AdoptStablePointer, void* pointer) {
     return object;
 }
 
+extern "C" void MutationCheck(ObjHeader* obj) {
+    if (obj->local()) return;
+    if (!isFrozen(obj)) return;
+
+    ThrowInvalidMutabilityException(obj);
+}
+
 extern "C" RUNTIME_NOTHROW void CheckLifetimesConstraint(ObjHeader* obj, ObjHeader* pointee) {
     if (!obj->local() && pointee != nullptr && pointee->local()) {
         konan::consolePrintf("Attempt to store a stack object %p into a heap object %p\n", pointee, obj);
         konan::consolePrintf("This is a compiler bug, please report it to https://kotl.in/issue\n");
         konan::abort();
     }
+}
+
+extern "C" void FreezeSubgraph(ObjHeader* obj) {
+    if (auto* blocker = mm::FreezeSubgraph(obj)) {
+        ThrowFreezingException(obj, blocker);
+    }
+}
+
+extern "C" void EnsureNeverFrozen(ObjHeader* obj) {
+    auto& extraObjectData = mm::ExtraObjectData::FromMetaObjHeader(obj->meta_object());
+    if (extraObjectData.IsFrozen()) {
+        ThrowFreezingException(obj, obj);
+    }
+    extraObjectData.EnsureNeverFrozen();
 }
 
 extern "C" ForeignRefContext InitForeignRef(ObjHeader* object) {

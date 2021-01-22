@@ -7,14 +7,6 @@
 
 #include "KAssert.h"
 
-ALWAYS_INLINE bool isFrozen(const ObjHeader* obj) {
-    TODO();
-}
-
-ALWAYS_INLINE bool isPermanentOrFrozen(const ObjHeader* obj) {
-    TODO();
-}
-
 extern "C" {
 
 OBJ_GETTER(InitThreadLocalSingleton, ObjHeader** location, const TypeInfo* typeInfo, void (*ctor)(ObjHeader*)) {
@@ -67,18 +59,6 @@ RUNTIME_NOTHROW void SetHeapRefLocked(ObjHeader** location, ObjHeader* newValue,
 }
 
 RUNTIME_NOTHROW OBJ_GETTER(ReadHeapRefLocked, ObjHeader** location, int32_t* spinlock, int32_t* cookie) {
-    TODO();
-}
-
-void MutationCheck(ObjHeader* obj) {
-    TODO();
-}
-
-void FreezeSubgraph(ObjHeader* obj) {
-    TODO();
-}
-
-void EnsureNeverFrozen(ObjHeader* obj) {
     TODO();
 }
 

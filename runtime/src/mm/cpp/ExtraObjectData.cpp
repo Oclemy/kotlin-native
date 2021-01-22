@@ -64,6 +64,22 @@ void mm::ExtraObjectData::Uninstall(ObjHeader* object) noexcept {
     delete &data;
 }
 
+bool mm::ExtraObjectData::IsFrozen() const noexcept {
+    return (flags_ & Flags::FLAGS_FROZEN) != 0;
+}
+
+bool mm::ExtraObjectData::CanBeFrozen() const noexcept {
+    return (flags_ & Flags::FLAGS_NEVER_FROZEN) == 0;
+}
+
+void mm::ExtraObjectData::Freeze() noexcept {
+    flags_ = static_cast<Flags>(flags_ | Flags::FLAGS_FROZEN);
+}
+
+void mm::ExtraObjectData::EnsureNeverFrozen() noexcept {
+    flags_ = static_cast<Flags>(flags_ | Flags::FLAGS_NEVER_FROZEN);
+}
+
 mm::ExtraObjectData::~ExtraObjectData() {
     if (weakReferenceCounter_) {
         WeakReferenceCounterClear(weakReferenceCounter_);

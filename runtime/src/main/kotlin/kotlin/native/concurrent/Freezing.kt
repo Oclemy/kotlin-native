@@ -24,6 +24,8 @@ public class InvalidMutabilityException(message: String) : RuntimeException(mess
 /**
  * Freezes object subgraph reachable from this object. Frozen objects can be freely
  * shared between threads/workers.
+ * Note: (Experimental MM) not thread safe. Modifying the object or its subgraph (including [freeze] and
+ * [ensureNeverFrozen]) is an undefined behavior.
  *
  * @throws FreezingException if freezing is not possible
  * @return the object itself
@@ -45,6 +47,8 @@ public val Any?.isFrozen
 /**
  * This function ensures that if we see such an object during freezing attempt - freeze fails and
  * [FreezingException] is thrown.
+ * Note: (Experimental MM) not thread safe. If called when the object is about to be frozen from
+ * a different thread is an undefined behavior.
  *
  * @throws FreezingException thrown immediately if this object is already frozen
  * @see freeze

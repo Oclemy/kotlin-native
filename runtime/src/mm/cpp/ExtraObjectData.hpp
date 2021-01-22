@@ -32,12 +32,26 @@ public:
 
     ObjHeader** GetWeakCounterLocation() noexcept { return &weakReferenceCounter_; }
 
+    bool IsFrozen() const noexcept;
+    bool CanBeFrozen() const noexcept;
+
+    void Freeze() noexcept;
+    void EnsureNeverFrozen() noexcept;
+
 private:
     explicit ExtraObjectData(const TypeInfo* typeInfo) noexcept : typeInfo_(typeInfo) {}
     ~ExtraObjectData();
 
     // Must be first to match `TypeInfo` layout.
     const TypeInfo* typeInfo_;
+
+    enum Flags : uint32_t {
+        FLAGS_NONE = 0,
+        FLAGS_FROZEN = 1 << 0,
+        FLAGS_NEVER_FROZEN = 1 << 1,
+    };
+
+    Flags flags_ = FLAGS_NONE;
 
 #ifdef KONAN_OBJC_INTEROP
     void* associatedObject_ = nullptr;
