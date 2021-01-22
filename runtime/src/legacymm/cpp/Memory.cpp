@@ -2871,7 +2871,7 @@ void runFreezeHooksRecursive(ObjHeader* root) {
     KRef obj = toVisit.back();
     toVisit.pop_back();
 
-    kotin::RunFreezeHooks(obj);
+    kotlin::RunFreezeHooks(obj);
 
     traverseReferredObjects(obj, [&seen, &toVisit](ObjHeader* field) {
       auto wasNotSeenYet = seen.insert(field).second;

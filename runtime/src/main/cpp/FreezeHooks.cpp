@@ -11,7 +11,7 @@
 
 using namespace kotlin;
 
-void RunFreezeHooks(ObjHeader* object) noexcept {
+void kotlin::RunFreezeHooks(ObjHeader* object) noexcept {
     if (object->type_info() == theWorkerBoundReferenceTypeInfo) {
         WorkerBoundReferenceFreezeHook(object);
     }
