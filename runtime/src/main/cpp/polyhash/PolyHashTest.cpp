@@ -20,7 +20,7 @@ TEST(PolyHashTest, Correctness) {
     str[k] = 0;
 
     for (int shift = 0; shift < 8; ++shift)
-      EXPECT_EQ(polyHashNaive(k - shift, str + shift), polyHash(k - shift, str + shift));
+      EXPECT_EQ(polyHash_naive(k - shift, str + shift), polyHash(k - shift, str + shift));
   }
 }
 
