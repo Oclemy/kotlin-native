@@ -111,7 +111,7 @@ public actual fun Char.isUpperCase(): Boolean {
     if (this < '\u0080') {
         return false
     }
-    return getCategoryValue() == CharCategory.UPPERCASE_LETTER.value
+    return isUpperCaseImpl()
 }
 
 /**
@@ -128,7 +128,7 @@ public actual fun Char.isLowerCase(): Boolean {
     if (this < '\u0080') {
         return false
     }
-    return getCategoryValue() == CharCategory.LOWERCASE_LETTER.value
+    return isLowerCaseImpl()
 }
 
 /**
