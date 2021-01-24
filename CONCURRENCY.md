@@ -1,6 +1,6 @@
 ## Concurrency in Kotlin/Native
 
-  Kotlin/Native runtime doesn't encourage a classical thread-oriented concurrency
+ Kotlin/Native runtime doesn't encourage a classical thread-oriented concurrency
  model with mutually exclusive code blocks and conditional variables, as this model is
  known to be error-prone and unreliable. Instead, we suggest a collection of
  alternative approaches, allowing you to use hardware concurrency and implement blocking IO.
